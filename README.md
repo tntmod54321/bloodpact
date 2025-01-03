@@ -2,14 +2,14 @@
 Yandex Cache scraper extension  
 
 # installation  
-on the cli:
-install dependencies using pip
-  windows: `py -m pip install -U -r requirements.txt`
-  unix: `python -m pip install -U -r requirements.txt`
-install chromium `playwright install chromium`
-run start_browser
-  windows: `py start_browser.py`
-  unix: `python start_browser.py`
+on the cli:  
+install dependencies using pip  
+  windows: `py -m pip install -U -r requirements.txt`  
+  unix: `python -m pip install -U -r requirements.txt`  
+install chromium `playwright install chromium`  
+run start_browser  
+  windows: `py start_browser.py`  
+  unix: `python start_browser.py`  
 
 # usage  
 upon visiting a yandex.com search page you will be redirected to a signup/login page,  
