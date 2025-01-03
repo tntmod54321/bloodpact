@@ -160,7 +160,6 @@ cython_debug/
 #.idea/
 
 /chromedata
-/ublock
 *.zip
 *.7z
 /testenv
