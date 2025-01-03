@@ -1,0 +1,31 @@
+{
+    "name": "bloodpact cache scraper",
+    "version": "0.9.2",
+    "description": "dm @nixietubes about any issues",
+    "manifest_version": 2,
+	"content_scripts": [{
+		"js": ["js/yandex_serp.js"],
+		"matches": ["*://yandex.com/search*"],
+		"run_at": "document_end"
+		},{
+		"js": ["js/yandex_cache.js"],
+		"matches": ["*://yandexwebcache.net/*"],
+		"run_at": "document_end"
+	}],
+	"background": {
+		"service_worker": "js/background.js"
+	},
+	"permissions": [
+		"tabs",
+		"webRequest",
+		"webRequestBlocking",
+		"storage",
+		"http://localhost:11803/*",
+		"https://sc-cache-api.strangled.net/*",
+		"*://yandex.com/*",
+		"*://yandexwebcache.net/*"
+	],
+	"host_permissions": ["*://yandex.com/*"],
+	"web_accessible_resources": ["img/*", "html/*"],
+	"context": "prod"
+}
