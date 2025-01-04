@@ -33,5 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		box.addEventListener('click', function(event) {
 			(async () => fetchToken())();
 		});
-	})
+	});
+	document.querySelectorAll('.textBox').forEach((box) => {
+		box.addEventListener('keypress', function(event) {
+			if (event.key === 'Enter') {
+					(async () => fetchToken())();
+				}
+		});
+	});
 })

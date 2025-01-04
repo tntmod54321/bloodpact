@@ -1,6 +1,6 @@
 {
     "name": "bloodpact cache scraper",
-    "version": "0.9.2",
+    "version": "0.9.3",
     "description": "dm @nixietubes about any issues",
     "manifest_version": 2,
 	"content_scripts": [{
