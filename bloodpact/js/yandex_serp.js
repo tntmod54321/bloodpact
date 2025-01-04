@@ -277,7 +277,7 @@ async function scrapeAll() {
       const cachelink = document.getElementById(`ydxcachelink-${serp_id}`);
       const serpItem = apiResp.data.results[String(serp_id)];
       
-      if (cachelink && serpItem?.ident) {
+      if (cachelink) {
 		// wait for open cache tabs count to decrease
 		await waitForFreeTabSlot();
         console.log('opened', serpItem.serp_id, serpItem.ident);
