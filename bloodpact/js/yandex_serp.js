@@ -328,7 +328,8 @@ function updatePage(data) {
 	
 	// add cache widgets to results
 	for (const serpItem of Object.values(data.results)) {
-		const serpElement = document.querySelector(`.${data.card_key}[data-cid="${serpItem.i}"]`)
+		console.log(`${data.index_key}="${serpItem.i}"`);
+		const serpElement = document.querySelector(`.${data.card_key}[${data.index_key}="${serpItem.i}"]`)
 		if (!serpItem) {
 			console.error('unable to find serp card', data.card_key, serpItem.i);
 		}
