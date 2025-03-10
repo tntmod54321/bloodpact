@@ -23,6 +23,7 @@ const svgUrls = {
   loaderVec: 'img/loader.svg',
   homeVec: 'img/home.svg',
   pageVec: 'img/page.svg',
+  queueVec: 'img/queue.svg',
 };
 const svgs = {};
 
@@ -35,6 +36,21 @@ function loadSvgs() {
       })
   );
   return Promise.all(fetchPromises);
+}
+
+function popQueue() {
+	const lines = localStorage.getItem('queue_str')
+		.split(/\r?\n/)
+		.map(line => line.trimEnd())
+		.filter(line => line !== "");
+	
+	if (lines.length) {
+		const newQuery = lines.shift();
+		localStorage.setItem('queue_str', lines.join('\n'));
+		return newQuery
+	} else {
+		return null
+	}
 }
 
 const GREEN = '#00FF00';
@@ -142,8 +158,9 @@ function addNavbar() {
 	const pageHeader = document.querySelector('.HeaderDesktop');
 	const newNavbar = document.createElement('nav');
 	newNavbar.innerHTML = `
-	<div id="scraperNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;">
-		<div id="scraperHomeVec" style="margin-right:10px; padding:3px; border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;"><a href="${chrome.runtime.getURL('/html/search_metadata.html')}">${svgs.homeVec}</a></div>
+	<div id="scraperNavbar" class="HeaderDesktop-Navigation">
+	<div id="scraperTopNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;padding-left: 0px;">
+		<div id="scraperHomeVec" title="Search metadata" style="margin-right:10px; padding:3px; border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;"><a href="${chrome.runtime.getURL('/html/search_metadata.html')}">${svgs.homeVec}</a></div>
 		<div id="scraperPagenav" style="border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;">
 			<a id="scraperPrevlink" style="margin: 3px;text-decoration: none;color: white;">🢀</a>
 			<div>${Number(currentPage)+1}</div>
@@ -163,7 +180,21 @@ function addNavbar() {
 			<span style="margin:3px">delay:</span>
 			<input style="width: 3em" id="scraperPaginateDelayInput" type="number" min="1" value="${localStorage.getItem('paginate_delay') || 15}">
 		</div>
-		<div id="scrapedCount" style="padding-left: 5px; margin: 5px;"><span id="scraperUnscrapedCount"></span>/<span id="scraperUniqUnscrapedCount"></span> total/unique unscraped</div>
+	</div>
+	<div id="scraperBottomNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;padding-left: 0px;">
+		<div id="scraperQueueVec" title="View search queue" style="margin-right:10px; display: flex; align-items: center; color: white;">
+		<button id="openQueueBtn" style="border-radius: 2rem;">${svgs.queueVec}</button></div>
+		<div id="scrapedCount"><span id="scraperUnscrapedCount"></span>/<span id="scraperUniqUnscrapedCount"></span> total/unique unscraped</div>
+	</div>
+	<dialog id="queueDiag" style="width: 600px;">
+        <form method="dialog">
+            <textarea id="queueText" name="queueText" placeholder="site:soundcloud.com soundcloud.com/sevensolilo..." rows="5" style="resize:vertical;width: 100%;"></textarea>
+            <div class="buttons">
+                <button type="button" id="submitQueueBtn">Update</button>
+                <button type="button" id="closeQueueBtn">Cancel</button>
+            </div>
+        </form>
+    </dialog>
 	</div>`;
 	pageHeader.append(newNavbar);
 	updateResultsCnt();
@@ -174,6 +205,13 @@ function addNavbar() {
 	
 	// fix home icon
 	setAttributes(newNavbar.querySelector('#scraperHomeVec svg'), {
+		'fill': 'white',
+		'height': '20px',
+		'width': '20px',
+	});
+	
+	// fix queue icon
+	setAttributes(newNavbar.querySelector('#scraperQueueVec svg'), {
 		'fill': 'white',
 		'height': '20px',
 		'width': '20px',
@@ -223,6 +261,18 @@ function addNavbar() {
 	
 	// update results padding to accomodate navbar
 	document.querySelector('.HeaderDesktopPlaceholder').style = `padding-top: ${document.querySelector('.HeaderDesktop').offsetHeight}px`;
+	
+	const queueDiag = document.getElementById("queueDiag");
+	const queueOpenBtn = document.getElementById("openQueueBtn");
+	const queueSubmitBtn = document.getElementById("submitQueueBtn");
+	const queueCloseBtn = document.getElementById("closeQueueBtn");
+
+	queueOpenBtn.addEventListener("click", () => {
+		document.querySelector('#queueText').value = localStorage.getItem('queue_str') || '';
+		queueDiag.showModal()
+	});
+	queueSubmitBtn.addEventListener("click", () => {localStorage.setItem('queue_str', document.querySelector('#queueText').value); queueDiag.close()});
+	queueCloseBtn.addEventListener("click", () => queueDiag.close());
 }
 
 function startCachePolling(serp_id) {
@@ -292,17 +342,31 @@ async function scrapeAll() {
 	
 	// autopaginate if wanted
 	const nextPageEl = document.getElementById('scraperNextlink');
-	if (((!(localStorage.getItem('paginate') === 'false')) || false) && nextPageEl.href) {
+	if (!(localStorage.getItem('paginate') === 'false')){
 		const now = new Date().getTime();
 		const elapsed = now - pageLoad;
 		const delay = localStorage.getItem('paginate_delay') * 1000;
 		
-		if (elapsed < delay) {
+		var nextUrl = null;
+		if (nextPageEl.href) {nextUrl = nextPageEl.href;}
+		else {
+			const nextQueue = popQueue();
+			if (nextQueue) {
+				// modify current url to go to new search
+				let url = new URL(window.location.href);
+				let params = url.searchParams;
+				params.set('text', nextQueue);
+				params.delete('p');
+				nextUrl = url.pathname + '?' + params.toString();
+			}
+		}
+		
+		if (elapsed < delay && nextUrl) {
 			console.log('waiting', delay - (now - pageLoad));
 			document.getElementById('scrapedCount').innerText = `waiting ${Math.round((Math.round((delay - elapsed) * 10) / 1000) * 10) / 100}s`;
-			setTimeout(() => {nextPageEl.click()}, delay - elapsed);
-		} else{
-			nextPageEl.click();
+			setTimeout(() => {window.location.assign(nextUrl);}, delay - elapsed);
+		} else if (nextUrl) {
+			window.location.assign(nextUrl);
 		}
 	}
   } catch (error) {
