@@ -8,6 +8,7 @@ let uniqCacheStatus = {};
 let cacheStatus = {};
 let openCacheTabs = 0;
 let access_token;
+let scrapeAllRunning = false;
 
 // import icons
 const svgUrls = {
@@ -271,7 +272,13 @@ function addNavbar() {
 		document.querySelector('#queueText').value = localStorage.getItem('queue_str') || '';
 		queueDiag.showModal()
 	});
-	queueSubmitBtn.addEventListener("click", () => {localStorage.setItem('queue_str', document.querySelector('#queueText').value); queueDiag.close()});
+	queueSubmitBtn.addEventListener("click", () => {
+		localStorage.setItem('queue_str', document.querySelector('#queueText').value);
+		queueDiag.close();
+		if (!scrapeAllRunning) { // run scrapeall if not already running
+			scrapeAll();
+		}
+	});
 	queueCloseBtn.addEventListener("click", () => queueDiag.close());
 }
 
@@ -306,6 +313,7 @@ async function waitForFreeTabSlot(interval = 200) {
 }
 
 async function scrapeAll() {
+	scrapeAllRunning = true;
 	// disable button
 	document.getElementById('scrapeAllButton').setAttribute('disabled', '');
 	
@@ -364,11 +372,17 @@ async function scrapeAll() {
 		if (elapsed < delay && nextUrl) {
 			console.log('waiting', delay - (now - pageLoad));
 			document.getElementById('scrapedCount').innerText = `waiting ${Math.round((Math.round((delay - elapsed) * 10) / 1000) * 10) / 100}s`;
-			setTimeout(() => {window.location.assign(nextUrl);}, delay - elapsed);
+			setTimeout(() => {
+				scrapeAllRunning = false; // going to nexturl soon
+				window.location.assign(nextUrl);
+			}, delay - elapsed);
 		} else if (nextUrl) {
+			scrapeAllRunning = false; // going to nexturl rn
 			window.location.assign(nextUrl);
+		} else {
+			scrapeAllRunning = false; // no nexturl
 		}
-	}
+	} else {scrapeAllRunning = false;} // pagination is false
   } catch (error) {
     console.error("Error processing cache status:", error);
   }
