@@ -570,6 +570,7 @@ setInterval(() => {
 		return response.json();
 	})
 	.then(data => {
+		scrapeAllRunning = false;
 		updatePage(data);
 		apiResp.data = data;
 	})
