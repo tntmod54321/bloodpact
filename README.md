@@ -87,7 +87,7 @@ request body must be a json dict containing the keys "username", and "password",
 the user will either be created or a login attempt will be made.  
 
 ## POST /metadata_search  
-request body must be a json dict containg the key "query", optionally "kinds", and "track_substring".  
+request body must be a json dict containing the key "query", optionally "kinds", and "track_substring".  
 
 the "query" value must be in the format of "{query_type}:{query}".  
 The available query types are "url", "username", "userid", "trackid", "playlistid".  
@@ -99,4 +99,6 @@ username:weejk
 ```
 the "kinds" value must be a csv of the expected kinds to be returned by the query, "track", "user", and/or "playlist". Default value is "track,user,playlist".  
 the "track_substring" value matches the first characters of a track's permalink, so if there is a track "/musicsong", then the substring "music" will match it,  
-however it would not be matched if the substring was "song". If the query is ended by a "$" symbol, then it will only match that exact string. E.g. "music$" will only match "/music".  
+however it would not be matched if the substring was "song".  
+If the track_substring query is ended by a "$" symbol, then it will only match that exact string. E.g. "music$" will only match "/music".  
+Usually used for fetching a specific track by permalink but with a userid query.  
