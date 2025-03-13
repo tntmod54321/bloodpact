@@ -43,7 +43,8 @@ You will want to search for all urls you've known that user to have like `soundc
 be a good idea to just search actual usernames they've had if they're distinctive enough, combining with prods/feats as need,
 like `site:soundcloud.com wifiskeleton` or `site:soundcloud.com wifiskeleton keepsecrets`.  
 One thing I've noticed is that when yandex is running thin on results for your query, sometimes it will just start returning  
-random soundcloud pages that are only a few days old.
+random soundcloud pages that are only a few days old.  
+You can also try phrases like "by keepsecrets" or "stream keepsecrets" that would show up in page titles.
 
 ## failed captures
 Sometimes yandex will return 404 pages when visiting a cached page,  
