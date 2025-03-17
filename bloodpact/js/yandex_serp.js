@@ -19,6 +19,7 @@ const svgUrls = {
   publicVec: 'img/public.svg',
   dbVec: 'img/database.svg',
   dbVec2: 'img/database2.svg',
+  dbVec: 'img/database2.svg',
   mobileVec: 'img/mobile.svg',
   desktopVec: 'img/desktop.svg',
   loaderVec: 'img/loader.svg',
@@ -39,15 +40,15 @@ function loadSvgs() {
   return Promise.all(fetchPromises);
 }
 
-function popQueue() {
-	const lines = localStorage.getItem('queue_str')
+async function popQueue() {
+	const lines = (await storageGet('queue_str', ''))
 		.split(/\r?\n/)
 		.map(line => line.trimEnd())
 		.filter(line => line !== "");
 	
 	if (lines.length) {
 		const newQuery = lines.shift();
-		localStorage.setItem('queue_str', lines.join('\n'));
+		await storageSet('queue_str', lines.join('\n'));
 		return newQuery
 	} else {
 		return null
@@ -69,7 +70,24 @@ function setAttributes(element, attributes) {
   }
   } else {
 	  console.error('passed null element');
+	  console.log(attributes);
   }
+}
+
+async function storageGet(key, defaultValue) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([key], (result) => {
+            resolve(result[key] !== undefined ? result[key] : defaultValue);
+        });
+    });
+}
+
+async function storageSet(key, value) {
+    return new Promise((resolve) => {
+        chrome.storage.local.set({ [key]: value }, () => {
+            resolve();
+        });
+    });
 }
 
 function setCacheIcon(serp_id, status, metacnt = 0) {
@@ -140,68 +158,62 @@ function updateResultsCnt() {
 	}
 }
 
-function addNavbar() {
-	// get prev/next links
-	var prevLink;
-	var nextLink;
-	
+async function addNavbar() {
 	const url = new URL(window.location.href);
 	const currentPage = url.searchParams.get('p');
 	
-	if (document.querySelector('.Pager-Item_type_begin')) {
-		prevLink = document.querySelector('.Pager-Item_type_begin').href
-	} else {prevLink = null}
-	if (document.querySelector('.Pager-ListItem_type_next a')) {
-		nextLink = document.querySelector('.Pager-ListItem_type_next a').href
-	} else {nextLink = null}
-	
-	// update navbar
-	const pageHeader = document.querySelector('.HeaderDesktop');
+	// create navbar
 	const newNavbar = document.createElement('nav');
 	newNavbar.innerHTML = `
-	<div id="scraperNavbar" class="HeaderDesktop-Navigation">
-	<div id="scraperTopNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;padding-left: 0px;">
-		<div id="scraperHomeVec" title="Search metadata" style="margin-right:10px; padding:3px; border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;"><a href="${chrome.runtime.getURL('/html/search_metadata.html')}">${svgs.homeVec}</a></div>
-		<div id="scraperPagenav" style="border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;">
-			<a id="scraperPrevlink" style="margin: 3px;text-decoration: none;color: white;">🢀</a>
-			<div>${Number(currentPage)+1}</div>
-			<a id="scraperNextlink" style="margin: 3px;text-decoration: none;color: white;">🢂</a>
-		</div>
-		<div style="margin-left:10px; overflow: hidden;border-radius: 2rem; outline: solid white; display: flex; align-items: center;">
-			<button id="scrapeAllButton" style="display: flex; align-items: center;" disabled>
-				<span style="margin:3px">save all</span>
-				<div id="scrapeallicon">${svgs.fdVec}</div>
-			</button>
-			<span style="margin:3px">concurrency:</span>
-			<input style="width: 2em" id="scraperConcurrencyInput" type="number" min="1" max="5" value="${localStorage.getItem('concurrency') || 2}">
-		</div>
-		<div style="margin-left:10px; overflow: hidden;border-radius: 2rem; outline: solid white; display: flex; align-items: center;">
-			<span style="margin:3px">auto-paginate:</span>
-			<input id="scraperPaginateInput" type="checkbox">
-			<span style="margin:3px">delay:</span>
-			<input style="width: 3em" id="scraperPaginateDelayInput" type="number" min="1" value="${localStorage.getItem('paginate_delay') || 15}">
-		</div>
+<div id="scraperNavbar" class="HeaderDesktop-Navigation">
+<div id="scraperTopNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;padding-left: 0px;">
+	<div id="scraperHomeVec" title="Bloodpact Home" style="margin-right:10px; padding:3px; border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;"><a href="${chrome.runtime.getURL('/html/home.html')}">${svgs.homeVec}</a></div>
+	<div id="scraperPagenav" style="border-radius: 2rem; outline: solid white; display: flex; align-items: center; color: white;">
+		<a id="scraperPrevlink" style="margin: 3px;text-decoration: none;color: white;">🢀</a>
+		<div>${Number(currentPage)+1}</div>
+		<a id="scraperNextlink" style="margin: 3px;text-decoration: none;color: white;">🢂</a>
 	</div>
-	<div id="scraperBottomNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;padding-left: 0px;">
-		<div id="scraperQueueVec" title="View search queue" style="margin-right:10px; display: flex; align-items: center; color: white;">
-		<button id="openQueueBtn" style="border-radius: 2rem;">${svgs.queueVec}</button></div>
-		<div id="scrapedCount"><span id="scraperUnscrapedCount"></span>/<span id="scraperUniqUnscrapedCount"></span> total/unique unscraped</div>
+	<div style="margin-left:10px; overflow: hidden;border-radius: 2rem; outline: solid white; display: flex; align-items: center;">
+		<button id="scrapeAllButton" style="display: flex; align-items: center;" disabled>
+			<span style="margin:3px">save all</span>
+			<div id="scrapeallicon">${svgs.fdVec}</div>
+		</button>
+		<span style="margin:3px">concurrency:</span>
+		<input style="width: 2em" id="scraperConcurrencyInput" type="number" min="1" max="10" value="${await storageGet('concurrency', 2)}">
 	</div>
-	<dialog id="queueDiag" style="width: 600px;">
-        <form method="dialog">
-            <textarea id="queueText" name="queueText" placeholder="site:soundcloud.com soundcloud.com/sevensolilo..." rows="5" style="resize:vertical;width: 100%;"></textarea>
-            <div class="buttons">
-                <button type="button" id="submitQueueBtn">Update</button>
-                <button type="button" id="closeQueueBtn">Cancel</button>
-            </div>
-        </form>
-    </dialog>
-	</div>`;
-	pageHeader.append(newNavbar);
-	updateResultsCnt();
+	<div style="margin-left:10px; overflow: hidden;border-radius: 2rem; outline: solid white; display: flex; align-items: center;">
+		<span style="margin:3px">auto-paginate:</span>
+		<input id="scraperPaginateInput" type="checkbox">
+		<span style="margin:3px">delay:</span>
+		<input style="width: 3em" id="scraperPaginateDelayInput" type="number" min="1" value="${await storageGet('paginate_delay', 15)}">
+	</div>
+</div>
+<div id="scraperBottomNavbar" class="HeaderDesktop-Navigation" style="margin-top: 10px; display: flex; align-items: center; font-size: 16px;padding-left: 0px;">
+	<div id="scraperQueueVec" title="View search queue" style="margin-right: 5px; display: flex; align-items: center; color: white;">
+	<button id="openQueueBtn" style="border-radius: 2rem;">${svgs.queueVec}</button></div>
+	<div style="overflow: hidden;border-radius: 2rem; outline: solid white; display: flex; align-items: center;">
+		<span style="margin:3px">retry cache pages:</span>
+		<input style="width: 2em" id="scraperRetryInput" type="number" min="0" value="${await storageGet('retries', 0)}">
+		<span style="margin:3px">delay:</span>
+		<input style="width: 3em" id="scraperRetryDelayInput" type="number" min="2" value="${await storageGet('retry_delay', 6)}">
+	</div>
+	<div style="margin-left: 10px;" id="scrapedCount"><span id="scraperUnscrapedCount"></span>/<span id="scraperUniqUnscrapedCount"></span> total/unique unscraped</div>
+</div>
+<dialog id="queueDiag" style="width: 600px;">
+	<form method="dialog">
+		<textarea id="queueText" name="queueText" placeholder="site:soundcloud.com soundcloud.com/sevensolilo..." rows="5" style="resize:vertical;width: 100%;"></textarea>
+		<div class="buttons">
+			<button type="button" id="submitQueueBtn">Update</button>
+			<button type="button" id="closeQueueBtn">Cancel</button>
+		</div>
+	</form>
+</dialog>
+</div>`;
 	
-	if (localStorage.getItem('paginate') === 'true') {
-		document.getElementById('scraperPaginateInput').setAttribute('checked', '');
+	await new Promise((resolve) => setTimeout(resolve, 0)); // Let DOM update // ig?
+	
+	if (await storageGet('paginate', false) === true) {
+		newNavbar.querySelector('#scraperPaginateInput').setAttribute('checked', '');
 	}
 	
 	// fix home icon
@@ -225,61 +237,81 @@ function addNavbar() {
 		'width': '20px',
 	});
 	
-	document.getElementById('scrapeAllButton').addEventListener('click', function() {
-        scrapeAll();
+	newNavbar.querySelector('#scrapeAllButton').addEventListener('click', async function() {
+        await scrapeAll();
     });
 	
 	// add concurrency input listener
-	const concurrencyinput = document.getElementById('scraperConcurrencyInput');
-	concurrencyinput.addEventListener('input', () => {
-	  localStorage.setItem('concurrency', concurrencyinput.value);
+	const concurrencyinput = newNavbar.querySelector('#scraperConcurrencyInput')
+	concurrencyinput.addEventListener('input', async () => {
+	  await storageSet('concurrency', concurrencyinput.value);
 	});
 	
 	// add paginate input listener
-	const paginateinput = document.getElementById('scraperPaginateInput');
-	paginateinput.addEventListener('input', () => {
-	  localStorage.setItem('paginate', paginateinput.checked);
+	const paginateinput = newNavbar.querySelector('#scraperPaginateInput')
+	paginateinput.addEventListener('input', async () => {
+	  await storageSet('paginate', paginateinput.checked);
 	  if (paginateinput.checked) {
-		  scrapeAll();
+		  await scrapeAll();
 	  }
 	});
 	
-	// add paginate input listener
-	const paginatedelayinput = document.getElementById('scraperPaginateDelayInput');
-	paginatedelayinput.addEventListener('input', () => {
-	  localStorage.setItem('paginate_delay', paginatedelayinput.value);
+	// add paginate delay input listener
+	const paginatedelayinput = newNavbar.querySelector('#scraperPaginateDelayInput')
+	paginatedelayinput.addEventListener('input', async () => {
+	  await storageSet('paginate_delay', paginatedelayinput.value);
+	});
+	
+	// add retry input listener
+	const retryinput = newNavbar.querySelector('#scraperRetryInput')
+	retryinput.addEventListener('input', async () => {
+	  await storageSet('retries', retryinput.value);
+	});
+	
+	// add retry delay input listener
+	const retrydelayinput = newNavbar.querySelector('#scraperRetryDelayInput')
+	retrydelayinput.addEventListener('input', async () => {
+	  await storageSet('retry_delay', retrydelayinput.value);
 	});
 	
 	// add page links
 	if (currentPage > 0) {
 		url.searchParams.set('p', Number(currentPage) - 1);
-		document.getElementById('scraperPrevlink').href = url.toString();
-	} else {document.getElementById('scraperPrevlink').setAttribute('style', `color:${GRAY}`);}
+		newNavbar.querySelector('#scraperPrevlink').href = url.toString();
+	} else {newNavbar.querySelector('#scraperPrevlink').setAttribute('style', `color:${GRAY}`);}
 	if (document.querySelectorAll('.Pager-Item_type_next').length) {
 		url.searchParams.set('p', Number(currentPage) + 1);
-		document.getElementById('scraperNextlink').href = url.toString();
-	} else {document.getElementById('scraperNextlink').setAttribute('style', `color:${GRAY}`);}
+		newNavbar.querySelector('#scraperNextlink').href = url.toString();
+	} else {newNavbar.querySelector('#scraperNextlink').setAttribute('style', `color:${GRAY}`);}
 	
 	// update results padding to accomodate navbar
 	document.querySelector('.HeaderDesktopPlaceholder').style = `padding-top: ${document.querySelector('.HeaderDesktop').offsetHeight}px`;
 	
-	const queueDiag = document.getElementById("queueDiag");
-	const queueOpenBtn = document.getElementById("openQueueBtn");
-	const queueSubmitBtn = document.getElementById("submitQueueBtn");
-	const queueCloseBtn = document.getElementById("closeQueueBtn");
+	const queueDiag = newNavbar.querySelector('#queueDiag');
+	const queueOpenBtn = newNavbar.querySelector('#openQueueBtn');
+	const queueSubmitBtn = newNavbar.querySelector('#submitQueueBtn');
+	const queueCloseBtn = newNavbar.querySelector('#closeQueueBtn');
 
-	queueOpenBtn.addEventListener("click", () => {
-		document.querySelector('#queueText').value = localStorage.getItem('queue_str') || '';
+	queueOpenBtn.addEventListener("click", async () => {
+		newNavbar.querySelector('#queueText').value = await storageGet('queue_str', '');
 		queueDiag.showModal()
 	});
-	queueSubmitBtn.addEventListener("click", () => {
-		localStorage.setItem('queue_str', document.querySelector('#queueText').value);
+	queueSubmitBtn.addEventListener("click", async () => {
+		await storageSet('queue_str', newNavbar.querySelector('#queueText').value);
 		queueDiag.close();
 		if (!scrapeAllRunning) { // run scrapeall if not already running
-			scrapeAll();
+			await scrapeAll();
 		}
 	});
 	queueCloseBtn.addEventListener("click", () => queueDiag.close());
+	
+	await new Promise((resolve) => setTimeout(resolve, 0)); // Let DOM update // ig?
+	
+	const pageHeader = document.querySelector('.HeaderDesktop');
+	pageHeader.append(newNavbar);
+	updateResultsCnt();
+	
+	await new Promise((resolve) => setTimeout(resolve, 0)); // Let DOM update // ig?
 }
 
 function startCachePolling(serp_id) {
@@ -295,8 +327,8 @@ async function waitForFreeTabSlot(interval = 200) {
     // const maxWaitTime = 100000; // Set a timeout to avoid infinite wait (100 seconds here)
     // const startTime = Date.now();
 
-    const checkValue = () => {
-      const concurrency = parseInt(localStorage.getItem('concurrency'));
+    const checkValue = async () => {
+      const concurrency = parseInt((await storageGet('concurrency', 2)));
       if (openCacheTabs < concurrency) {
         resolve(); // Resolve when the condition is met
       }
@@ -331,7 +363,7 @@ async function scrapeAll() {
 	
 	try {
     // Loop through all "unscraped" serp_ids
-    for (const serp_id of Object.keys(cacheStatus).filter(k => cacheStatus[k] === "unscraped")) {
+    for (const serp_id of Object.keys(cacheStatus).filter(k => ( cacheStatus[k] === "unscraped" || cacheStatus[k] === "scraped" && apiResp.data.results[k].ident))) {
       const cachelink = document.getElementById(`ydxcachelink-${serp_id}`);
       const serpItem = apiResp.data.results[String(serp_id)];
       
@@ -350,15 +382,15 @@ async function scrapeAll() {
 	
 	// autopaginate if wanted
 	const nextPageEl = document.getElementById('scraperNextlink');
-	if (!(localStorage.getItem('paginate') === 'false')){
+	if (!(await storageGet('paginate', false) === false)){
 		const now = new Date().getTime();
 		const elapsed = now - pageLoad;
-		const delay = localStorage.getItem('paginate_delay') * 1000;
+		const delay = (await storageGet('paginate_delay', 15)) * 1000;
 		
 		var nextUrl = null;
 		if (nextPageEl.href) {nextUrl = nextPageEl.href;}
 		else {
-			const nextQueue = popQueue();
+			const nextQueue = await popQueue();
 			if (nextQueue) {
 				// modify current url to go to new search
 				let url = new URL(window.location.href);
@@ -388,7 +420,8 @@ async function scrapeAll() {
   }
 }
 
-function updatePage(data) {
+async function updatePage(data) {
+	await new Promise((resolve) => setTimeout(resolve, 0)); // Let DOM update // ig?
 	apiResp.data = data;
 	const textHighlight = document.createElement('style');
 	textHighlight.innerHTML = '.scraper_highlight {color: #000000; background-color: #FFFF00}';
@@ -457,7 +490,7 @@ function updatePage(data) {
 			
 			// set meta icon
 			const metavec = cacheInfo.querySelector('.metavecreal')
-			metavec.innerHTML = svgs.dbVec2;
+			metavec.innerHTML = svgs.dbVec;
 			setAttributes(metavec.querySelector('svg'), {
 				'height': '20px',
 				'width': '20px',
@@ -499,7 +532,7 @@ function updatePage(data) {
 	}
 	
 	// auto-paginate if desired
-	if (localStorage.getItem('paginate') === 'true') {
+	if (await storageGet('paginate', false) === true) {
 		scrapeAll();
 	}
 }
@@ -548,9 +581,6 @@ setInterval(() => {
 // send serp body, retrieve info
 (async () => {
 	access_token = await getAccessToken();
-	// console.log('ACCESS TOKEN:', access_token);
-	
-	// await loadSvgs();
 	
 	loadSvgs().then(() => {
 	fetch(api_root + '/yandex_serp', {
@@ -562,8 +592,7 @@ setInterval(() => {
 		headers: {'x-bloodpact-token': access_token}
 	})
 	.then(response => {
-		if (response.status == 401) {
-			// redirect to login prompt
+		if (response.status == 401) { // redirect to login prompt
 			window.location = chrome.runtime.getURL('/html/login.html');
 			throw new Error('YAY 401');
 		} else if (!response.ok) {throw new Error('BAD YDX SERP API RESPONSE!');}

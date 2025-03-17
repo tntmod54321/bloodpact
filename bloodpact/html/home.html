@@ -1,0 +1,90 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src = "/js/metadata_search.js"></script>
+<script src = "/js/show_leaderboard.js"></script>
+<script src = "/js/show_errors.js"></script>
+<style>.h {margin:0px; margin-top:10px;}</style>
+<style>
+<style>
+#leaderboard {
+	width: 300px;
+	padding: 10px;
+	background-color: #222;
+	border-radius: 5px;
+	margin-right: 20px;
+}
+
+#leaderboard table {
+	width: 100%;
+	border-collapse: collapse;
+	text-align: center;
+}
+
+th, td {
+	border: 1px solid #444;
+	padding: 5px;
+}
+
+th {
+	background-color: #333;
+}
+
+.total-row {
+	font-weight: bold;
+	background-color: #444;
+}
+</style>
+</head>
+<body style="background-color: #111112; color: #FFFFFF">
+
+<div class="top-container" style="display: flex; align-items: flex-start;">
+<div class="search-container">
+	<h1>Metadata search</h1>
+	<div><div><h2 class="h">search by url</h2>e.x. https://soundcloud.com/menthol100s</div><input querytype="url" type="text" class="queryBox"><button class="queryButton">-></button></div>
+	<div><div><h2 class="h">search by user permalink</h2>e.x. weejk</div><input querytype="username" type="text" class="queryBox"><button class="queryButton">-></button></div>
+	<div><div><h2 class="h">search by user id</h2>e.x. 640711191</div><input querytype="userid" type="text" class="queryBox"><button class="queryButton">-></button></div>
+	<div><div><h2 class="h">search by track id</h2>e.x. 1352146204</div><input querytype="trackid" type="text" class="queryBox"><button class="queryButton">-></button></div>
+</div>
+
+<div id="leaderboard" style="margin-left: 30px">
+	<h1>Leaderboard</h1>
+	<b>Last updated: <span id="leaderboardUpdatedTime"></span></b>
+	<table>
+		<thead>
+			<tr>
+				<th>#</th>
+				<th>user</th>
+				<th>cache pages</th>
+				<th>soundcloud metadata</th>
+			</tr>
+		</thead>
+		<tbody id="leaderboardBody">
+			<tr class="total-row">
+				<td></td>
+				<td>Total</td>
+				<td id="total1">0</td>
+				<td id="total2">0</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+</div>
+<hr>
+
+<h1>Cache error log</h1>
+<table>
+	<thead>
+		<tr>
+			<th>timestamp</th>
+			<th>meta saved elsewhere</th>
+			<th>cache error</th>
+			<th>url</th>
+		</tr>
+	</thead>
+	<tbody id="errorsBody">
+	</tbody>
+</table>
+
+</body>
+</html>

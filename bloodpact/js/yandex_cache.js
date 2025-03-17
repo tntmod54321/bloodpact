@@ -3,6 +3,14 @@ const api_root = manifest.context === 'dev' ? 'http://localhost:11803' : 'https:
 
 // send body, then close tab if successful
 
+async function storageGet(key, defaultValue) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([key], (result) => {
+            resolve(result[key] !== undefined ? result[key] : defaultValue);
+        });
+    });
+}
+
 async function getAccessToken() {
 	const { access_token } = await new Promise((resolve, reject) => {
       chrome.storage.sync.get(['access_token'], (result) => {
@@ -27,11 +35,24 @@ async function getAccessToken() {
 		}),
 		headers: {'x-bloodpact-token': access_token}
 	})
-	.then(response => {
+	.then(async response => {
 		if (!response.ok) {
-			const x = document.createElement('div');
-			x.innerHTML = '<header style="color: #000000;top: 0;right: 0;left: 0;z-index: 1;position: fixed;font-size:30px;-webkit-text-stroke: 1px black;background: #FFFFFF;">Scarper: serverside metadata extraction failed. Refresh page. If error persists move on.</header>';
-			document.querySelector('body').append(x);
+			const msgBanner = document.createElement('div');
+			
+			msgBanner.innerHTML = `<header style="color: #000000;top: 0;right: 0;left: 0;z-index: 1;position: fixed;font-size:30px;-webkit-text-stroke: 1px black;background: #FFFFFF;">Scraper: serverside metadata extraction failed. Refresh page. If error persists move on.<br>Performed <span id="attempt_cnt">UNSET</span>/<span id="retries_cnt">UNSET</span> retries</header>`;
+			document.querySelector('body').append(msgBanner);
+			
+			await new Promise((resolve) => setTimeout(resolve, 0)); // Let DOM update // ig?
+			
+			const retries = await storageGet('retries', 0);
+            document.getElementById('retries_cnt').innerText = retries;
+			
+			chrome.runtime.sendMessage({ action: 'checkTabRetries' }, (response) => {
+				console.log(response);
+                if (response && response.retries !== undefined) {
+                    document.getElementById('attempt_cnt').innerText = response.retries;
+                }
+            });
 			
 			throw new Error('BAD YDX CACHE API RESPONSE!');
 		}
